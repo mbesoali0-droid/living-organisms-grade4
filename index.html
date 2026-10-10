@@ -344,6 +344,7 @@ svg { display: block; }
   .slotb { min-width: 96px; }
   .opts.g2 { grid-template-columns: 1fr; }
 }
+.stack > .badge-n { align-self: flex-start; }
 </style>
 <svg width="0" height="0" style="position:absolute" aria-hidden="true">
   <defs>
@@ -843,19 +844,43 @@ var WIDGETS = {
 };
 
 var cur = null;
+var TOPICN = { L1: 'Living Organisms and Non-living Things', L2: 'Habitats of Living Organisms', L3: 'Activity: Exploring the Habitats' };
+var UNITS = [{ id: 'U1', no: 1, title: "Let's Find Living Organisms", img: 'hero', topics: ['L1', 'L2', 'L3'] }];
+function lessonById(id) { return LESSONS.filter(function (x) { return x.id === id; })[0]; }
+function unitOf(id) { return UNITS.filter(function (u) { return u.topics.indexOf(id) >= 0; })[0]; }
 function lessonPct(L) { var m = (P.pos[L.id] == null ? -1 : P.pos[L.id]) + 1; return Math.min(100, Math.round(m / L.slides.length * 100)); }
+function unitPct(U) {
+  var tot = 0, got = 0;
+  U.topics.forEach(function (id) { var L = lessonById(id); tot += L.slides.length; got += Math.min(L.slides.length, (P.pos[id] == null ? -1 : P.pos[id]) + 1); });
+  return Math.min(100, Math.round(got / tot * 100));
+}
 function renderLearn() {
   cur = null;
   var h = $('#p-learn');
-  h.innerHTML = '<div class="hello"><h1><mark>Let\'s Find</mark> Living Organisms</h1><p style="color:var(--soft);font-weight:700">Pick a lesson to start.</p></div><div class="lessons" id="lessons"></div>';
-  LESSONS.forEach(function (L, k) {
-    var c = el('button', 'card lcard', '<figure class="pic tint"><img src="' + IMG[L.img] + '" alt=""></figure><div class="stack" style="gap:8px"><span class="badge-n">' + (k + 1) + '</span><h3>' + esc(L.title) + '</h3><div class="prog"><i style="width:' + lessonPct(L) + '%"></i></div><div class="meta">' + L.slides.length + ' steps</div></div>');
-    c.type = 'button'; c.addEventListener('click', function () { openLesson(L.id, 0); });
+  h.innerHTML = '<div class="hello"><h1><mark>Lessons</mark></h1><p style="color:var(--soft);font-weight:700">Pick a lesson to start.</p></div><div class="lessons" id="lessons"></div>';
+  UNITS.forEach(function (U) {
+    var c = el('button', 'card lcard', '<figure class="pic tint"><img src="' + IMG[U.img] + '" alt=""></figure><div class="stack" style="gap:8px"><span class="badge-n gno">Lesson ' + U.no + '</span><h3>' + esc(U.title) + '</h3><div class="prog"><i style="width:' + unitPct(U) + '%"></i></div><div class="meta">' + U.topics.length + ' topics</div></div>');
+    c.type = 'button'; c.addEventListener('click', function () { renderUnit(U.id); });
     $('#lessons').appendChild(c);
   });
+  window.scrollTo(0, 0);
+}
+function renderUnit(uid) {
+  cur = null;
+  var U = UNITS.filter(function (x) { return x.id === uid; })[0], h = $('#p-learn');
+  h.innerHTML = '<div class="ptop"><button type="button" class="btn ghost" id="bk" aria-label="All lessons">' + icon('prev') + '</button><span class="badge-n gno">Lesson ' + U.no + '</span><h2 class="gtitle">' + esc(U.title) + '</h2></div>' +
+    '<div class="prog" style="margin-bottom:18px"><i style="width:' + unitPct(U) + '%"></i></div><div class="lessons" id="topics"></div>';
+  $('#bk').addEventListener('click', renderLearn);
+  U.topics.forEach(function (id, k) {
+    var L = lessonById(id);
+    var c = el('button', 'card lcard', '<figure class="pic tint"><img src="' + IMG[L.img] + '" alt=""></figure><div class="stack" style="gap:8px"><span class="badge-n">' + (k + 1) + '</span><h3>' + esc(TOPICN[id]) + '</h3><div class="prog"><i style="width:' + lessonPct(L) + '%"></i></div><div class="meta">' + L.slides.length + ' steps</div></div>');
+    c.type = 'button'; c.addEventListener('click', function () { openLesson(L.id, 0); });
+    $('#topics').appendChild(c);
+  });
+  window.scrollTo(0, 0);
 }
 function openLesson(id, i) {
-  var L = LESSONS.filter(function (x) { return x.id === id; })[0];
+  var L = lessonById(id);
   cur = { L: L, i: i }; renderSlide();
 }
 function renderSlide() {
@@ -863,29 +888,32 @@ function renderSlide() {
   if (i >= L.slides.length) { renderDone(); return; }
   P.pos[L.id] = Math.max(P.pos[L.id] == null ? -1 : P.pos[L.id], i); save();
   var s = L.slides[i];
-  h.innerHTML = '<div class="ptop"><button type="button" class="btn ghost" id="bk" aria-label="All lessons">' + icon('prev') + '</button><div class="prog" role="progressbar" aria-valuemin="0" aria-valuemax="' + L.slides.length + '" aria-valuenow="' + (i + 1) + '"><i style="width:' + Math.round((i + 1) / L.slides.length * 100) + '%"></i></div></div>' +
+  h.innerHTML = '<div class="ptop"><button type="button" class="btn ghost" id="bk" aria-label="All topics">' + icon('prev') + '</button><div class="prog" role="progressbar" aria-valuemin="0" aria-valuemax="' + L.slides.length + '" aria-valuenow="' + (i + 1) + '"><i style="width:' + Math.round((i + 1) / L.slides.length * 100) + '%"></i></div></div>' +
     '<div class="slide" id="sl">' + s.h + (s.ar ? '<div class="hint-ar"><button type="button" class="btn ghost" data-ar aria-expanded="false" lang="ar">عربي</button><div class="arbox hide ar" lang="ar">' + s.ar + '</div></div>' : '') + '</div>' +
     '<div class="pfoot"><button type="button" class="btn ghost" id="pv"' + (i === 0 ? ' disabled' : '') + '>' + icon('prev') + 'Back</button><button type="button" class="btn green" id="nx">' + (i === L.slides.length - 1 ? 'Finish' : 'Next') + icon('next') + '</button></div>';
   var sl = $('#sl'); hydrate(sl);
   $$('[data-w]', sl).forEach(function (w) { WIDGETS[w.getAttribute('data-w')](w); });
-  $('#bk').addEventListener('click', renderLearn);
+  $('#bk').addEventListener('click', function () { renderUnit(unitOf(L.id).id); });
   $('#pv').addEventListener('click', function () { cur.i--; renderSlide(); });
   $('#nx').addEventListener('click', function () { cur.i++; renderSlide(); });
   window.scrollTo(0, 0);
 }
 function renderDone() {
-  var L = cur.L, h = $('#p-learn'); award('done:' + L.id);
+  var L = cur.L, U = unitOf(L.id), h = $('#p-learn'), nxt = U.topics[U.topics.indexOf(L.id) + 1]; award('done:' + L.id);
   h.innerHTML = '<div class="card rbig"><h2 style="font-size:40px">Well done!</h2><div class="stars"><svg class="f"><use href="#i-star"/></svg><svg class="f"><use href="#i-star"/></svg><svg class="f"><use href="#i-star"/></svg></div>' +
-    '<p style="font-size:22px">You finished: <b>' + esc(L.title) + '</b></p><div class="rowx" style="justify-content:center"><button type="button" class="btn sun" id="gt">' + icon('next') + 'Take the test</button><button type="button" class="btn ghost" id="gl">All lessons</button></div></div>';
-  $('#gl').addEventListener('click', renderLearn);
-  $('#gt').addEventListener('click', function () { showTab('test'); startTest({ lesson: parseInt(L.id.slice(1), 10), n: 15, title: L.title }); });
+    '<p style="font-size:22px">You finished: <b>' + esc(TOPICN[L.id]) + '</b></p><div class="rowx" style="justify-content:center">' +
+    (nxt ? '<button type="button" class="btn green" id="gn">' + icon('next') + 'Next topic</button>' : '') +
+    '<button type="button" class="btn sun" id="gt">' + icon('next') + 'Take the test</button><button type="button" class="btn ghost" id="gl">All topics</button></div></div>';
+  $('#gl').addEventListener('click', function () { renderUnit(U.id); });
+  if (nxt) $('#gn').addEventListener('click', function () { openLesson(nxt, 0); });
+  $('#gt').addEventListener('click', function () { showTab('test'); startTest({ lesson: parseInt(L.id.slice(1), 10), n: 15, title: TOPICN[L.id] }); });
   window.scrollTo(0, 0);
 }
 
 /* ===== words tab ===== */
 function renderWords() {
   var h = $('#p-words'); h.innerHTML = '<div class="hello"><h1><mark>Words</mark></h1><p style="color:var(--soft);font-weight:700">Tap a card to listen.</p></div><div class="stack" id="wl" style="gap:24px"></div>';
-  var names = { 1: "Let's Find Living Organisms", 2: 'Habitats of Living Organisms', 3: 'Activity' };
+  var names = { 1: TOPICN.L1, 2: TOPICN.L2, 3: TOPICN.L3 };
   [1, 2, 3].forEach(function (n) {
     var sec = el('div', 'stack', '<div class="sect-h"><span class="badge-n">' + n + '</span><h3>' + names[n] + '</h3></div>');
     var host = el('div'); sec.appendChild(host); wordCards(host, VOCAB.filter(function (w) { return w[2] === n; })); $('#wl').appendChild(sec);
@@ -1197,7 +1225,7 @@ function renderTestHome() {
     '<div class="filter" id="flt" style="margin-bottom:18px"></div><div class="sgrid" id="sg"></div>';
   if (typeof examCards === 'function') examCards(h);
   var flt = $('#flt');
-  [[0, 'All lessons'], [1, 'Lesson 1'], [2, 'Lesson 2'], [3, 'Activity']].forEach(function (x) {
+  [[0, 'All topics'], [1, 'Living Organisms'], [2, 'Habitats'], [3, 'Activity']].forEach(function (x) {
     var b = el('button', 'chipb', x[1]); b.type = 'button'; b.setAttribute('aria-pressed', String(F.lesson === x[0]));
     b.addEventListener('click', function () { F.lesson = x[0]; renderTestHome(); }); flt.appendChild(b);
   });
